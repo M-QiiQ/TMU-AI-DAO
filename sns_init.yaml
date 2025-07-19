@@ -1,0 +1,19 @@
+# SNS Initialization Config for TMU DAO
+# Inspired by EKOKE, using Motoko
+
+dapp_canisters: []
+initial_token_distribution:
+  developer_distribution:
+    developer_neurons:
+      - controller: <YOUR_PRINCIPAL_ID>
+        stake: 100_000_000_000
+        memo: 0
+        dissolve_delay: 15780000
+    treasury_distribution: 400_000_000_000
+    airdrop_distribution:
+      airdrop_neurons: []
+sns_governance: {}
+swap: {}
+ledger: {}
+root: {}
+index: {}

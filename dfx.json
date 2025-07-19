@@ -1,0 +1,14 @@
+{
+  "canisters": {
+    "tmu_dao": {
+      "type": "motoko",
+      "main": "src/tmu_dao/main.mo"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "version": 1
+}
