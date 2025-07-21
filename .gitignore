@@ -1,0 +1,6 @@
+# Ignore OS-Specific Files
+.DS_Store
+Thumbs.db
+
+#Ignore the .dfx/local directory
+.dfx/local/

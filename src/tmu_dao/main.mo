@@ -1,26 +1,29 @@
 import Time "mo:base/Time";
 import HashMap "mo:base/HashMap";
 import Text "mo:base/Text";
+import Nat "mo:base/Nat";
+import Int "mo:base/Int";
+import Hash "mo:base/Hash";
 
 actor TMUDAO {
 
-  type ProposalId = Nat;
+  type ProposalId = Int;
   type Vote = { #yes; #no };
 
   type Proposal = {
-    id: ProposalId;
-    title: Text;
-    description: Text;
-    createdAt: Time.Time;
-    votesYes: Nat;
-    votesNo: Nat;
-    deadline: Time.Time;
-    passed: Bool;
-    resolved: Bool;
+    id: ProposalId;          // unique identifier for each proposal
+    title: Text;             // short name of the proposal
+    description: Text;       // detailed info
+    createdAt: Time.Time;    // when it was submitted
+    votesYes: Nat;           // number of Yes votes
+    votesNo: Nat;            // number of No votes
+    deadline: Time.Time;     // when voting closes
+    passed: Bool;            // result (true = passed)
+    resolved: Bool;          // whether the result has been finalized
   };
 
   var nextProposalId : ProposalId = 0;
-  let proposals = HashMap.HashMap<ProposalId, Proposal>(0, Nat.equal, Nat.hash);
+  let proposals = HashMap.HashMap<ProposalId, Proposal>(0, Int.equal, Int.hash);
 
   public func submitProposal(title: Text, description: Text, durationSeconds: Nat) : async ProposalId {
     let now = Time.now();
@@ -51,17 +54,17 @@ actor TMUDAO {
           return "Voting period has ended.";
         };
 
-        if (vote == #yes) {
-          p.votesYes += 1;
-        } else {
-          p.votesNo += 1;
+        let updatedProposal = switch (vote) {
+          case (#yes) { { p with votesYes = p.votesYes + 1 } };
+          case (#no)  { { p with votesNo = p.votesNo + 1 } };
         };
 
-        proposals.put(proposalId, p);
+        proposals.put(proposalId, updatedProposal);
         return "Vote recorded.";
       };
     }
   };
+
 
   public func resolveProposal(proposalId: ProposalId) : async Text {
     switch (proposals.get(proposalId)) {
@@ -90,4 +93,5 @@ actor TMUDAO {
   public query func getProposal(proposalId: ProposalId) : async ?Proposal {
     return proposals.get(proposalId);
   };
+  
 }
