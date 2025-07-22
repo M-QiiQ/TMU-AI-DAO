@@ -74,23 +74,22 @@ This isn’t just a demo—it’s a working prototype for **real-world DAO-ified
 
 ## 👥 Team
 
-- **Founder**: Michael Fevens  
-- **Legal & DAO Strategy**: [Names/roles here]  
-- **Smart Contracts & ICP**: [Names/roles]  
-- **Design & Frontend**: [Names/roles]
+### 🧑‍💼 Founder  
+- **Carl Teo**
 
----
+### 💻 Smart Contracts & ICP  
+| Name             | Role                                   |
+|------------------|----------------------------------------|
+| Michael Fevens   | Smart Contract Developer, Coordinator, Docs & Testing |
+| Hanane Chablaoui | Smart Contract Developer               |
+| Nabil Toukazi    | Smart Contract Developer               |
 
-## 🗳️ Join Us
+### 📢 Marketing & Outreach  
+| Name           | Role                                     |
+|----------------|------------------------------------------|
+| Maha Tichetti  | Marketing Lead, Pitch Deck & Messaging   |
+| Nadir Souizi   | Outreach, Messaging & Community Engagement |
 
-We invite you to:
-- ✅ **Contribute** to code or docs
-- 🔍 **Audit** the SNS and governance model
-- 🗳️ **Participate** in proposals and decision-making
-
-> This is just the beginning. Let's build Web3-native legal entities that work in the real world.
-
----
 
 ## 🔗 Resources
 

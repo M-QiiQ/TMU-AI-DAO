@@ -3,7 +3,6 @@ import HashMap "mo:base/HashMap";
 import Text "mo:base/Text";
 import Nat "mo:base/Nat";
 import Int "mo:base/Int";
-import Hash "mo:base/Hash";
 
 actor TMUDAO {
 

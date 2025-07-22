@@ -1,5 +1,4 @@
 # SNS Initialization Config for TMU DAO
-# Inspired by EKOKE, using Motoko
 
 dapp_canisters: []
 initial_token_distribution:
