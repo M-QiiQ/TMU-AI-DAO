@@ -1,31 +1,100 @@
-# TMU DAO
+# TMU AI DAO LLC: Tokenizing Decentralized Governance on ICP
 
-This project is a Motoko-based Service Nervous System (SNS) DAO on the Internet Computer.
+Welcome to our Hackathon submission: **TMU AI DAO LLC** — a project demonstrating how a traditional legal entity can be transformed into a **compliant, tokenized Real-World Asset (RWA)** on the **Internet Computer Protocol (ICP)**.
 
-## Project Summary
+## 🚀 What We're Building
 
-TMU DAO governs a real-world service infrastructure (video meetings, AI transcription, metadata storage). Inspired by:
-- **EKOKE DAO** for its real-world asset tokenization framing
-- **ICExplorer** for Web2 to Web3 governance transition
-
-## Structure
-
-- `dfx.json`: Declares the `tmu_dao` Motoko canister
-- `sns_init.yaml`: SNS configuration
-- `main.mo`: Motoko logic (simple greeting interface)
-
-## How to Deploy
-
-1. Replace `<YOUR_PRINCIPAL_ID>` in `sns_init.yaml` with your real Principal ID
-2. Deploy canister:
-   ```bash
-   dfx deploy
-   ```
-3. Initialize SNS (once canister is ready):
-   ```bash
-   dfx sns deploy --config sns_init.yaml
-   ```
+We are tokenizing **TMU AI DAO LLC**, an actual registered company, by encoding its **ownership and governance structure** into a **Service Nervous System (SNS)** on ICP. This project bridges the gap between Web2 legal frameworks and Web3 decentralized infrastructure.
 
 ---
 
-This is a minimal SNS starter for TMU DAO development.
+## 🎯 Project Focus
+
+We aim to:
+
+- ✔ **Enable decentralized governance** by using ICP’s SNS to transition from traditional LLC equity to token-based community control.
+- ✔ **Enhance transparency and security** via ICP’s tamper-proof ledger, mitigating governance fraud and data manipulation.
+- ✔ **Bridge Web2 and Web3** through hybrid compliance—ensuring real-world legality while harnessing blockchain agility and programmability.
+
+---
+
+## 📦 What’s Inside
+
+Our project includes:
+
+- **SNS Launch Configuration** – A real, deployable SNS for TMU AI DAO LLC
+- **Governance Tokenomics** – Designed to align legal ownership with on-chain voting rights
+- **Hybrid Compliance Framework** – Explaining how off-chain legal docs match on-chain governance
+- **Live Demo / Dashboard** – Interact with the SNS, submit proposals, and vote
+- **Investment Deck (linked)** – Outlining the vision, legal design, and monetization model
+
+---
+
+## 🌉 Why It Matters
+
+Real-world assets like companies, real estate, or funds require compliance, governance, and auditability. ICP’s native DAO tooling and canister infrastructure allows us to:
+
+- Build tamper-resistant, auditable governance processes
+- Create real investor confidence through on-chain transparency
+- Open liquidity paths for traditional ownership structures
+
+This isn’t just a demo—it’s a working prototype for **real-world DAO-ified corporations**.
+
+---
+
+## 🧠 Tech Stack
+
+- Internet Computer Protocol (ICP)
+- Motoko + SNS Governance
+- TypeScript (frontend)
+- Canister-based smart contracts
+- Identity & Wallet Integration (NFID/Plug)
+
+---
+
+## 🧪 How to Run
+
+1. Clone this repo
+2. Deploy locally via DFX or testnet
+3. Interact with the SNS governance portal
+4. (Optional) Connect to your wallet and participate in test governance
+
+> See [DEVELOPMENT.md](DEVELOPMENT.md) for full build & deploy instructions.
+
+---
+
+## 📄 Legal + Compliance
+
+- TMU AI DAO LLC is an **actual registered LLC**
+- Legal documents mirror the token governance structure
+- Project aligns with **RWA tokenization** principles
+- We support **hybrid compliance**: legal enforcement off-chain, DAO governance on-chain
+
+---
+
+## 👥 Team
+
+- **Founder**: Michael Fevens  
+- **Legal & DAO Strategy**: [Names/roles here]  
+- **Smart Contracts & ICP**: [Names/roles]  
+- **Design & Frontend**: [Names/roles]
+
+---
+
+## 🗳️ Join Us
+
+We invite you to:
+- ✅ **Contribute** to code or docs
+- 🔍 **Audit** the SNS and governance model
+- 🗳️ **Participate** in proposals and decision-making
+
+> This is just the beginning. Let's build Web3-native legal entities that work in the real world.
+
+---
+
+## 🔗 Resources
+
+- 📜 [Investment Deck (PDF)](./assets/TMU_AI_DAO_PitchDeck.pdf)
+- 🧠 [ICP SNS Documentation](https://internetcomputer.org/docs/current/developer-docs/integrations/sns/)
+- 🌐 [TMU Website](https://tmu.ai)
+
