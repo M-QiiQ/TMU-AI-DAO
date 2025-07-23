@@ -46,7 +46,6 @@ This isn’t just a demo—it’s a working prototype for **real-world DAO-ified
 
 - Internet Computer Protocol (ICP)
 - Motoko + SNS Governance
-- TypeScript (frontend)
 - Canister-based smart contracts
 - Identity & Wallet Integration (NFID/Plug)
 
