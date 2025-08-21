@@ -3,6 +3,10 @@
     "tmu_dao": {
       "type": "motoko",
       "main": "src/tmu_dao/main.mo"
+    },
+    "token": {
+      "type": "motoko",
+      "main": "src/dfx/token.mo"
     }
   },
   "defaults": {
@@ -10,5 +14,12 @@
       "packtool": ""
     }
   },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }
+  },
   "version": 1
 }
+
