@@ -9,6 +9,10 @@
       "main": "src/dfx/token.mo"
     }
   },
+      "staking": {
+      "main": "src/staking/StakingCanister.mo",
+      "type": "motoko"
+    },
   "defaults": {
     "build": {
       "packtool": ""
