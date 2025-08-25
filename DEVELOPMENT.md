@@ -37,8 +37,8 @@ Before you begin, make sure the following tools are installed on your system:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/tmu-ai-dao/tmu-rwa-sns.git
-cd tmu-rwa-sns
+git clone https://github.com/M-QiiQ/TMU-AI-DAO.git
+cd TMU-AI-DAO
 ```
 
 ---
@@ -75,15 +75,7 @@ This deploys:
 
 ## 🌐 Interacting with SNS (Testnet or Mainnet)
 
-If deployed to mainnet/testnet, include the real SNS canister IDs:
-
-```
-Root Canister:      r7inp-6aaaa-aaaaa-aaabq-cai
-Governance:         rdmx6-jaaaa-aaaaa-aaadq-cai
-Ledger:             ryjl3-tyaaa-aaaaa-aaaba-cai
-Swap:               rkp4c-7iaaa-aaaaa-aaaca-cai
-Index (optional):   qhbym-qaaaa-aaaaa-aaafq-cai
-```
+If deployed to mainnet/testnet, include the real SNS canister IDs
 
 You can interact via:
 
