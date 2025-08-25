@@ -4,3 +4,4 @@ Thumbs.db
 
 #Ignore the .dfx/local directory
 .dfx/local/
+.dfx/network/local
