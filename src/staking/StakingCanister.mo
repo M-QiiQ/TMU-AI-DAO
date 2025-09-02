@@ -1,102 +1,74 @@
+// src/staking/StakingCanister.mo
 import Nat       "mo:base/Nat";
 import Nat64     "mo:base/Nat64";
 import Principal "mo:base/Principal";
 import Time      "mo:base/Time";
 import HashMap   "mo:base/HashMap";
-import Option    "mo:base/Option";
 import Iter      "mo:base/Iter";
+import Option    "mo:base/Option";
 import Debug     "mo:base/Debug";
 
-persistent actor StakingCanister {
+actor StakingCanister {
 
-  // ============================================================
-  //                   CONFIG / FEATURE SWITCHES
-  // ============================================================
-
-  // [LOCAL-TEST-ONLY] Run with an internal fake balance ledger (no Token canister needed).
-  // Set to false in production and wire a real Token canister.
-  let DEV_MODE : Bool = true;
-
-  // ============================================================
-  //                          TYPES
-  // ============================================================
-
+  // ---------------------- TYPES ----------------------
   public type Amount    = Nat;
   public type Timestamp = Nat64;
 
   public type StakeInfo = {
     staker         : Principal;
     amount         : Amount;
-    startTimeNs    : Timestamp;   // monotonic IC time, nanoseconds
-    lockPeriodSecs : Nat64;       // lock duration in seconds
-    claimedRewards : Amount;      // cumulative rewards paid
+    startTimeNs    : Timestamp;   // IC time in ns
+    lockPeriodSecs : Nat64;       // seconds
+    claimedRewards : Amount;      // cumulative rewards already paid
   };
 
-  // Minimal DIP20-style token interface
+  // Your current Token interface
   type Token = actor {
-    allowance    : (owner : Principal, spender : Principal) -> async Nat;
-    approve      : (spender : Principal, amount : Nat) -> async Bool;
-    transfer     : (to : Principal, amount : Nat) -> async Bool;
-    transferFrom : (from : Principal, to : Principal, amount : Nat) -> async Bool;
-    balanceOf    : (owner : Principal) -> async Nat;
+    balanceOf : (owner : Principal) -> async Nat;
+    transfer  : (to : Principal, amount : Nat) -> async Bool;
   };
 
-  // ============================================================
-  //                         CONSTANTS
-  // ============================================================
-
+  // ------------------- CONSTANTS/HELPERS -------------------
   let SECONDS_PER_YEAR : Nat64 = 31_536_000;
   let NANOS_PER_SEC    : Nat64 = 1_000_000_000;
 
+  func nowNs() : Nat64 = Nat64.fromIntWrap(Time.now());
+
   func weightFor(lockSecs : Nat64) : Nat {
-    // Governance bonus by duration
     if (lockSecs >= 3 * SECONDS_PER_YEAR) { 2 }
     else if (lockSecs >= 1 * SECONDS_PER_YEAR) { 1 }
     else { 1 };
   };
 
-  // APR numerator/denominator (e.g., 10/100 = 10% APR)
-  var _apr_num : Nat = 10;
-  var _apr_den : Nat = 100;
+  // APR as fraction (_apr_num / _apr_den), e.g., 10/100 = 10%
+  stable var _apr_num : Nat = 10;
+  stable var _apr_den : Nat = 100;
 
-  // ============================================================
-  //                         STATE (STABLE)
-  // ============================================================
+  // ---------------------- STATE ----------------------
+  stable var _stakes_kv           : [(Principal, StakeInfo)] = [];
+  stable var _totalStaked         : Amount = 0;
 
-  // stakes map 
-  var _stakes_kv     : [(Principal, StakeInfo)] = [];
-  var _totalStaked   : Amount = 0;
+  stable var _tokenPid            : ?Principal = null;  // Token canister principal
+  stable var _governancePid       : ?Principal = null;  // Governance canister principal (TMUDAO)
+  stable var _observedTreasuryBal : Amount = 0;         // staking canister's token balance (for PUSH verification)
 
-  // Optional accounting cap to limit total rewards payout
-  var _rewardPoolCap : Amount = 0;
+  // Runtime map of stakes 
+  var stakes = HashMap.HashMap<Principal, StakeInfo>(128, Principal.equal, Principal.hash);
 
-  // Wiring to external canisters for production
-  var _tokenPid      : ?Principal = null;  // Token canister principal (PROD)
-  var _governancePid : ?Principal = null;  // Governance canister principal (PROD)
-  var _rewardsVault  : ?Principal = null;  // Optional external vault paying rewards (PROD)
+  // ------------------- UPGRADE HOOKS -------------------
+  system func preupgrade() {
+    _stakes_kv := Iter.toArray(stakes.entries());
+  };
 
-  // ============================================================
-  //                         RUNTIME MAPS
-  // ============================================================
+  system func postupgrade() {
+    // Rebuild map from stable snapshot
+    stakes := HashMap.fromIter<Principal, StakeInfo>(
+      _stakes_kv.vals(), 128, Principal.equal, Principal.hash
+    );
+  };
 
-  flexible let stakes = HashMap.HashMap<Principal, StakeInfo>(64, Principal.equal, Principal.hash);
-
-  // [LOCAL-TEST-ONLY] Fake balances so you can test without Token canister.
-  var _devBalances_kv : [(Principal, Amount)] = [];
-  flexible let devBalances = HashMap.HashMap<Principal, Amount>(64, Principal.equal, Principal.hash);
-
-  // ============================================================
-  //                         HELPERS
-  // ============================================================
-
- 
-  func nowNs() : Nat64 = Nat64.fromIntWrap(Time.now());
-
-  // Governance guard:
-  // - [LOCAL-TEST-ONLY] the guard is bypassed so you can call admin setters.
-  // - In PROD, only the governance principal may call admin methods.
+  // ------------------- INTERNAL UTILS -------------------
   func onlyGov(caller : Principal) {
-    if (DEV_MODE) { return }; // [LOCAL-TEST-ONLY] bypass admin guard
     switch _governancePid {
       case (?g) {
         if (caller != g) { Debug.trap("⛔ Only governance can call this method") };
@@ -105,7 +77,6 @@ persistent actor StakingCanister {
     }
   };
 
-  // Token actor accessor
   func token() : Token {
     switch _tokenPid {
       case (?p) { actor (Principal.toText(p)) : Token };
@@ -113,92 +84,51 @@ persistent actor StakingCanister {
     }
   };
 
-  // [LOCAL-TEST-ONLY] Fake ledger helpers
-  func dev_credit(p : Principal, amt : Amount) {
-    let cur = Option.get(devBalances.get(p), 0);
-    devBalances.put(p, cur + amt);
-  };
-
-  func dev_debit(p : Principal, amt : Amount) : Bool {
-    let cur = Option.get(devBalances.get(p), 0);
-    if (cur < amt) { return false };
-    devBalances.put(p, cur - amt);
-    true
-  };
-
-  // ============================================================
-  //                       UPGRADE HOOKS
-  // ============================================================
-
-  system func preupgrade() {
-    _stakes_kv := Iter.toArray(stakes.entries());
-    // [LOCAL-TEST-ONLY]
-    _devBalances_kv := Iter.toArray(devBalances.entries());
-  };
-
-  system func postupgrade() {
-    for ((k, v) in _stakes_kv.vals()) { stakes.put(k, v) };
-    // [LOCAL-TEST-ONLY]
-    for ((k, v) in _devBalances_kv.vals()) { devBalances.put(k, v) };
-  };
-
-  // ============================================================
-  //                        ADMIN (GOV)
-  // ============================================================
-
-  // In DEV_MODE these are callable by anyone (bypass guard). In PROD, restricted to governance.
-
+  // ------------------- ADMIN (GOV-ONLY) -------------------
   public shared(msg) func setTokenCanister(p : Principal) : async () {
-    onlyGov(msg.caller); _tokenPid := ?p;
+    onlyGov(msg.caller);
+    _tokenPid := ?p;
+
+    // Initialize observed canister balance for PUSH flow
+    let t = token();
+    _observedTreasuryBal := await t.balanceOf(Principal.fromActor(StakingCanister));
   };
 
   public shared(msg) func setGovernanceCanister(p : Principal) : async () {
-    if (_governancePid != null) { onlyGov(msg.caller) }; // allow first-time set by controller/anyone in DEV
+    // Allow first-time set by anyone (local), changes after that require gov
+    if (_governancePid != null) { onlyGov(msg.caller) };
     _governancePid := ?p;
   };
 
   public shared(msg) func setAPR(num : Nat, den : Nat) : async () {
     onlyGov(msg.caller);
-    if (den == 0) { Debug.trap("⛔ Denominator must be > 0") };
+    if (den == 0) { Debug.trap("⛔ APR denominator must be > 0") };
     _apr_num := num; _apr_den := den;
   };
 
-  public shared(msg) func addRewardsCap(amount : Amount) : async () {
-    onlyGov(msg.caller);
-    _rewardPoolCap += amount;
-  };
+  // ------------------- STAKE (PUSH FLOW) -------------------
+  // 1) User calls token.transfer(staking_canister, amount)
+  // 2) User calls stakeAfterTransfer(amount, lockSecs)
+  // Staking verifies its own token balance increased by >= amount.
+  public shared(msg) func stakeAfterTransfer(amount : Amount, lockPeriodSecs : Nat64) : async Bool {
+    if (amount == 0) { Debug.trap("⛔ Amount must be > 0") };
 
-  public shared(msg) func setRewardsVault(p : Principal) : async () {
-    onlyGov(msg.caller); _rewardsVault := ?p;
-  };
-
-  // ============================================================
-  //                        STAKE
-  // ============================================================
-
-  public shared(msg) func stake(amount : Amount, lockPeriodSecs : Nat64) : async Bool {
-    if (amount == 0) { Debug.trap("⛔ Stake amount must be > 0") };
-
-    // Pull funds from user
-    if (DEV_MODE) {
-      if (not dev_debit(msg.caller, amount)) {
-        Debug.trap("⛔ Insufficient dev balance"); // [LOCAL-TEST-ONLY]
-      };
-    } else {
-      let t = token();
-      
-      let ok = await t.transferFrom(msg.caller, Principal.fromActor(StakingCanister), amount);
-      if (not ok) { Debug.trap("⛔ transferFrom failed (approve missing or insufficient balance)") };
+    let t = token();
+    let before = _observedTreasuryBal;
+    let nowBal = await t.balanceOf(Principal.fromActor(StakingCanister));
+    if (nowBal < before + amount) {
+      Debug.trap("⛔ Deposit not detected. Transfer tokens to the staking canister first.");
     };
+    _observedTreasuryBal := nowBal;
 
-    // Merge or create user stake
+    // Merge or create stake
     switch (stakes.get(msg.caller)) {
       case (?s) {
         let merged : StakeInfo = {
           staker         = s.staker;
           amount         = s.amount + amount;
-          startTimeNs    = s.startTimeNs; 
-          lockPeriodSecs = Nat64.max(s.lockPeriodSecs, lockPeriodSecs);
+          startTimeNs    = s.startTimeNs;  // preserve original start
+          lockPeriodSecs = Nat64.max(s.lockPeriodSecs, lockPeriodSecs); // extend lock if longer
           claimedRewards = s.claimedRewards;
         };
         stakes.put(msg.caller, merged);
@@ -219,10 +149,7 @@ persistent actor StakingCanister {
     true
   };
 
-  // ============================================================
-  //                       UNSTAKE
-  // ============================================================
-
+  // ------------------- UNSTAKE -------------------
   public shared(msg) func unstake() : async Amount {
     switch (stakes.get(msg.caller)) {
       case null { 0 };
@@ -231,69 +158,49 @@ persistent actor StakingCanister {
         if (elapsedSecs < s.lockPeriodSecs) {
           Debug.trap("⛔ Stake is still locked");
         };
+
         let amt = s.amount;
 
+        // 1) Pay principal first
+        let t = token();
+        let ok = await t.transfer(msg.caller, amt);
+        if (not ok) {
+          Debug.trap("⛔ Token transfer back to user failed");
+        };
+
+        // 2) Only now mutate state
         ignore stakes.remove(msg.caller);
         _totalStaked -= amt;
 
-        if (DEV_MODE) {
-          dev_credit(msg.caller, amt); // [LOCAL-TEST-ONLY]
-        } else {
-          let t = token();
-          let ok = await t.transfer(msg.caller, amt);
-          if (not ok) { Debug.trap("⛔ Transfer back to user failed") };
-        };
+        // 3) Refresh cache
+        _observedTreasuryBal := await t.balanceOf(Principal.fromActor(StakingCanister));
 
         amt
       };
     }
   };
 
-  // ============================================================
-  //                        REWARDS: CLAIM
-  // ============================================================
 
+  // ------------------- CLAIM REWARDS -------------------
   public shared(msg) func claimRewards() : async Amount {
     switch (stakes.get(msg.caller)) {
       case null { 0 };
       case (?s) {
         let elapsedSecs : Nat64 = (nowNs() - s.startTimeNs) / NANOS_PER_SEC;
 
-        // raw reward = amount * elapsedSecs/yr * APR
-        //            = amount * elapsedSecs * apr_num / (yr * apr_den)
+        // reward = amount * (elapsedSecs / year) * (apr_num/apr_den)
         let base : Nat = s.amount * Nat64.toNat(elapsedSecs);
         let raw  : Nat = (base * _apr_num) / (Nat64.toNat(SECONDS_PER_YEAR) * _apr_den);
-
         let owing = if (raw > s.claimedRewards) { raw - s.claimedRewards } else { 0 };
         if (owing == 0) { return 0 };
 
-        // Respect accounting cap if set
-        if (_rewardPoolCap > 0 and owing > _rewardPoolCap) {
-          if (_rewardPoolCap == 0) { return 0 };
-        };
+        // pay rewards from staking canister's token balance
+        let t = token();
+        let ok = await t.transfer(msg.caller, owing);
+        if (not ok) { Debug.trap("⛔ Reward transfer failed (insufficient staking balance?)") };
 
-        // Payout
-        if (DEV_MODE) {
-          dev_credit(msg.caller, owing); // [LOCAL-TEST-ONLY]
-        } else {
-          let t = token();
-          let payer : Principal =
-            switch _rewardsVault { case (?v) v; case null { Principal.fromActor(StakingCanister) } };
-
-          var ok : Bool = false;
-     
-          if (payer == Principal.fromActor(StakingCanister)) {
-            ok := await t.transfer(msg.caller, owing);
-          } else {
-            ok := await t.transferFrom(payer, msg.caller, owing);
-          };
-          if (not ok) { Debug.trap("⛔ Reward transfer failed") };
-        };
-
-        // Decrease accounting cap after paying
-        if (_rewardPoolCap > 0) { _rewardPoolCap -= Nat.min(_rewardPoolCap, owing) };
-
-        // Update stake record
+        // update observed balance and stake record
+        _observedTreasuryBal := await t.balanceOf(Principal.fromActor(StakingCanister));
         let updated : StakeInfo = {
           staker         = s.staker;
           amount         = s.amount;
@@ -302,35 +209,38 @@ persistent actor StakingCanister {
           claimedRewards = s.claimedRewards + owing;
         };
         stakes.put(msg.caller, updated);
-
         owing
       };
     }
   };
 
-  // ============================================================
-  //                         READ-ONLY
-  // ============================================================
-
+  // ------------------- READ-ONLY -------------------
   public query func getStakeInfo(p : Principal) : async ?StakeInfo { stakes.get(p) };
 
   public query func getTotalStaked() : async Amount { _totalStaked };
 
   public query func getVotingPower(p : Principal) : async Nat {
-    switch (stakes.get(p)) { case null { 0 }; case (?s) { s.amount * weightFor(s.lockPeriodSecs) } }
+    switch (stakes.get(p)) {
+      case null { 0 };
+      case (?s) { s.amount * weightFor(s.lockPeriodSecs) };
+    }
   };
 
   public query func configAPR() : async (Nat, Nat) { (_apr_num, _apr_den) };
 
-  public query func rewardPoolCap() : async Amount { _rewardPoolCap };
-
-  // [LOCAL-TEST-ONLY] expose fake balance for testing UI/CLI
-  public query func devBalanceOf(p : Principal) : async Amount {
-    if (DEV_MODE) { Option.get(devBalances.get(p), 0) } else { 0 }
+  public query func principals() : async (staking : Principal, token : ?Principal, governance : ?Principal) {
+    (Principal.fromActor(StakingCanister), _tokenPid, _governancePid)
   };
 
-  // [LOCAL-TEST-ONLY] credit fake tokens to caller for local tests
-  public shared(msg) func devCredit(amount : Amount) : async () {
-    if (DEV_MODE) { dev_credit(msg.caller, amount) }
+  // Return cached staking-canister token balance (kept fresh by stake/claim/unstake/setTokenCanister)
+  public query func stakingBalance() : async Amount {
+    _observedTreasuryBal
   };
-};
+
+  // Optional: force-refresh the cache (update call; allowed to await)
+  public shared(msg) func refreshStakingBalance() : async Amount {
+    let t = token();
+    _observedTreasuryBal := await t.balanceOf(Principal.fromActor(StakingCanister));
+    _observedTreasuryBal
+  };
+}

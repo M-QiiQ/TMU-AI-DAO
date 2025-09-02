@@ -16,6 +16,7 @@ actor Token {
   let balances = HashMap.HashMap<Account, Balance>(10, Principal.equal, Principal.hash);
 
   // 👇 هذا هو صاحب العقد، غيّره إذا لزم الأمر
+
   stable let owner : Principal = Principal.fromText("vadmv-dovmg-7wpws-i6moa-7tcxa-pywev-4wrbx-tjh7w-wfyxv-uwl2x-5ae");
 
   system func preupgrade() {

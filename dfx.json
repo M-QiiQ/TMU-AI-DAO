@@ -1,18 +1,22 @@
 {
   "canisters": {
+    "token": {
+      "type": "motoko",
+      "main": "src/dfx/token.mo"
+    },
+    "staking": {
+      "type": "motoko",
+      "main": "src/staking/StakingCanister.mo"
+    },
     "tmu_dao": {
       "type": "motoko",
       "main": "src/tmu_dao/main.mo"
     },
-    "token": {
+    "treasury": {
       "type": "motoko",
-      "main": "src/dfx/token.mo"
+      "main": "src/treasury/TreasuryCanister.mo"
     }
   },
-      "staking": {
-      "main": "src/staking/StakingCanister.mo",
-      "type": "motoko"
-    },
   "defaults": {
     "build": {
       "packtool": ""
@@ -23,7 +27,5 @@
       "bind": "127.0.0.1:4943",
       "type": "ephemeral"
     }
-  },
-  "version": 1
+  }
 }
-
