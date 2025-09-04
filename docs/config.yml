@@ -1,0 +1,6 @@
+title: TMU AI DAO Blog
+baseurl: ""
+url: "https://M-QiiQ.github.io"
+theme: minima
+plugins:
+  - jekyll-feed       #Optional RSS feed

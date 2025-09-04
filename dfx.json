@@ -7,12 +7,12 @@
     "token": {
       "type": "motoko",
       "main": "src/dfx/token.mo"
+    },
+    "staking": {
+      "type": "motoko",
+      "main": "src/staking/StakingCanister.mo"
     }
   },
-      "staking": {
-      "main": "src/staking/StakingCanister.mo",
-      "type": "motoko"
-    },
   "defaults": {
     "build": {
       "packtool": ""
@@ -26,4 +26,5 @@
   },
   "version": 1
 }
+
 
